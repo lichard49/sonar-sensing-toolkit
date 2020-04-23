@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
     <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
     <script src="/static/js/sound_player.js"></script>
-    <script src="/static/js/tone.js"></script>
   </head>
   <body>
   <section class="section">
@@ -20,23 +19,36 @@
       </p>
 
       <div>
-        <button onclick="playSound();">Play a sound!</button>
+        <button onclick="playSound(200);">Play a sound!</button>
+        <button onclick="playSound(2000);">Play a higher sound!</button>
       </div>
     </div>
   </section>
 
   <script type="text/javascript">
-    function playSound() {
-      var AudioContext = window.AudioContext // Default
+    var audio_init = false;
+    var sound_player = null;
+
+    function initAudio() {
+      AudioContext = window.AudioContext // Default
           || window.webkitAudioContext // Safari and old versions of Chrome
           || false;
 
+      // Do whatever you want using the Web Audio API
+      var ctx = new AudioContext;
+      const audio = new AudioContext();
+      sound_player = new SoundPlayer(audio);
+
+      audio_init = true;
+    }
+
+    function playSound(frequency) {
+      if (!audio_init) {
+        initAudio();
+      }
+
       if (AudioContext) {
-          // Do whatever you want using the Web Audio API
-          var ctx = new AudioContext;
-          const audio = new AudioContext();
-          (new SoundPlayer(audio)).play(20000, 0.5, 'sine').stop(1);
-          alert('hi');
+          sound_player.play(frequency, 0.5, 'sine').stop(1);
       } else {
           // Web Audio API is not supported
           // Alert the user
