@@ -5,25 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sonar Sensing Toolkit</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
+    <style>
+      #spectrogram-canvas {
+        background-color: #000000;
+        width: 100%;
+      }
+    </style>
     <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
     <script src="/static/js/tone.js"></script>
   </head>
   <body>
   <section class="section">
     <div class="container">
-      <h1 class="title">
+      <h1 class="title is-1">
         Sonar Sensing Toolkit
       </h1>
-      <p class="subtitle">
+      <p class="subtitle is-3">
         Play with sounds!
       </p>
 
-      <div>
-        <button onclick="playSound(200);">Play a sound</button>
-        <button onclick="playSound(2000);">Play a higher sound</button>
-        <button onclick="recordSound();">Record a sound</button>
-        <p>Magnitude: <span id="audio-mag"></span></p>
-      </div>
+      <nav class="level">
+        <div class="level-item has-text-centered">
+          <div>
+            <button onclick="playSound(200);">Play a sound</button>
+            <button onclick="playSound(2000);">Play a higher sound</button>
+            <button onclick="recordSound();">Record a sound</button>
+            <p>Magnitude: <span id="audio-mag"></span></p>
+          </div>
+        </div>
+      </nav>
+
+      <nav class="level">
+        <div class="level-item hero-body">
+          <canvas id="spectrogram-canvas">
+            Spectrogram showing live mic data.
+          </canvas>
+        </div>
+      </nav>
+
+      <nav class="level">
+        <div class="level-item has-text-centered">
+          <div>
+            <h3 class="title is-3">Classification</h3>
+          </div>
+        </div>
+      </nav>
     </div>
   </section>
 
@@ -38,6 +64,18 @@
       mic: null,
       processor: null
     };
+
+    var spectrogram = {
+      canvas: document.getElementById('spectrogram-canvas'),
+      context: null
+    };
+    spectrogram.context = spectrogram.canvas.getContext('2d');
+    spectrogram.canvas.height = spectrogram.canvas.width / 3;
+    spectrogram.context.fillStyle = "#000000";
+    spectrogram.context.fillRect(0, 0,
+      spectrogram.canvas.getAttribute('width'),
+      spectrogram.canvas.getAttribute('height')
+    );
 
     function initAudio() {
       // create a synth and connect it to the master output (your speakers)
