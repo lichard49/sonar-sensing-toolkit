@@ -6,7 +6,7 @@
     <title>Sonar Sensing Toolkit</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
     <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
-    <script src="/static/js/sound_player.js"></script>
+    <script src="/static/js/tone.js"></script>
   </head>
   <body>
   <section class="section">
@@ -21,23 +21,33 @@
       <div>
         <button onclick="playSound(200);">Play a sound!</button>
         <button onclick="playSound(2000);">Play a higher sound!</button>
+        <button onclick="recordSound();">Record a sound!</button>
+        <p>Magnitude: <span id="audio-mag"></span></p>
       </div>
     </div>
   </section>
 
   <script type="text/javascript">
     var audio_init = false;
-    var sound_player = null;
+
+    var player = {
+      synth: null
+    };
+
+    var recorder = {
+      mic: null,
+      processor: null
+    };
 
     function initAudio() {
-      AudioContext = window.AudioContext // Default
-          || window.webkitAudioContext // Safari and old versions of Chrome
-          || false;
+      // create a synth and connect it to the master output (your speakers)
+      player.synth = new Tone.Synth().toMaster();
 
-      // Do whatever you want using the Web Audio API
-      var ctx = new AudioContext;
-      const audio = new AudioContext();
-      sound_player = new SoundPlayer(audio);
+      // create mic and callback listener
+      // must create a synth first
+      recorder.mic = new Tone.UserMedia();
+      recorder.processor = Tone.context.createScriptProcessor(1024, 1, 1);
+      recorder.processor.connect(Tone.context.destination.input);
 
       audio_init = true;
     }
@@ -47,13 +57,34 @@
         initAudio();
       }
 
-      if (AudioContext) {
-          sound_player.play(frequency, 0.5, 'sine').stop(1);
-      } else {
-          // Web Audio API is not supported
-          // Alert the user
-          alert("Sorry, but the Web Audio API is not supported by your browser. Please, consider upgrading to the latest version or downloading Google Chrome or Mozilla Firefox");
+      // play a middle 'C' for the duration of an 8th note
+      player.synth.triggerAttack(frequency);
+    }
+
+    function recordSound() {
+      if (!audio_init) {
+        initAudio();
       }
+
+      // opening the input asks the user to activate their mic
+      recorder.mic.open().then(function(e) {
+        // promise resolves when input is available
+        e._mediaStream.connect(recorder.processor);
+
+        recorder.processor.onaudioprocess = onAudioData;
+      });
+    }
+
+    function onAudioData(event) {
+      document.getElementById('audio-mag').innerHTML = getMagnitude(event.inputBuffer.getChannelData(0));
+    }
+
+    function getMagnitude(array) {
+      var mag = 0;
+      for (var i = array.length - 1; i >= 0; i--) {
+        mag += array[i] ** 2;
+      }
+      return mag ** 0.5;
     }
   </script>
   </body>
