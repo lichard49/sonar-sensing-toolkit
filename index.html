@@ -6,6 +6,8 @@
     <title>Sonar Sensing Toolkit</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
     <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+    <script src="/static/js/sound_player.js"></script>
+    <script src="/static/js/tone.js"></script>
   </head>
   <body>
   <section class="section">
@@ -16,7 +18,31 @@
       <p class="subtitle">
         Playing with sounds!
       </p>
+
+      <div>
+        <button onclick="playSound();">Play a sound!</button>
+      </div>
     </div>
   </section>
+
+  <script type="text/javascript">
+    function playSound() {
+      var AudioContext = window.AudioContext // Default
+          || window.webkitAudioContext // Safari and old versions of Chrome
+          || false;
+
+      if (AudioContext) {
+          // Do whatever you want using the Web Audio API
+          var ctx = new AudioContext;
+          const audio = new AudioContext();
+          (new SoundPlayer(audio)).play(20000, 0.5, 'sine').stop(1);
+          alert('hi');
+      } else {
+          // Web Audio API is not supported
+          // Alert the user
+          alert("Sorry, but the Web Audio API is not supported by your browser. Please, consider upgrading to the latest version or downloading Google Chrome or Mozilla Firefox");
+      }
+    }
+  </script>
   </body>
 </html>
