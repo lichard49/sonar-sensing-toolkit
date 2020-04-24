@@ -32,11 +32,9 @@
       </nav>
 
       <nav class="level">
-        <div class="level-item hero-body">
-          <canvas id="spectrogram-canvas" width="1024" height="300">
-            Spectrogram showing live mic data.
-          </canvas>
-        </div>
+        <canvas id="spectrogram-canvas" width="520" height="300" style="overflow: visible; margin: 10px;">
+          Spectrogram showing live mic data.
+        </canvas>
       </nav>
 
       <nav class="level">
@@ -204,6 +202,7 @@
           spectrogram.canvas.getAttribute('height')
         );
 
+        // pilot tone tracking
         spectrogram.context.fillStyle = "#FF0000";
         spectrogram.context.fillRect(pilot_tone_bin - 5, 200, 10, 10);
         spectrogram.context.fillRect(bandwidth_lower_bound, 10,
