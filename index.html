@@ -22,6 +22,7 @@
       <nav class="level">
         <div class="level-item has-text-centered">
           <div>
+            <p>Sample Rate: <span id="sample-rate"></span></p>
             <button onclick="startDopplerSensing();">Start</button>
             <button onclick="stopDopplerSensing();">Stop</button>
             <p>Magnitude: <span id="audio-mag"></span></p>
@@ -50,6 +51,11 @@
   <script type="text/javascript">
     var audio_init = false;
 
+    var sensing = {
+      pilot_tone: 18000,
+      fft_size: 1024
+    }
+
     var player = {
       synth: null
     };
@@ -75,7 +81,7 @@
     spectrogram.context.scale(1, -1);
 
     function startDopplerSensing() {
-      playSound(18000);
+      playSound(sensing.pilot_tone);
       recordSound();
     }
 
@@ -92,8 +98,10 @@
       // create mic and callback listener
       // must create a synth first
       recorder.mic = new Tone.UserMedia();
-      recorder.processor = Tone.context.createScriptProcessor(1024, 1, 1);
+      recorder.processor = Tone.context.createScriptProcessor(sensing.fft_size, 1, 1);
       recorder.processor.connect(Tone.context.destination.input);
+
+      document.getElementById('sample-rate').innerHTML = Tone.context.sampleRate;
 
       audio_init = true;
     }
@@ -136,14 +144,15 @@
 
     setInterval(function() {
       if (audio_init && recorder.audio_buffer != null) {
-        var real = jsFFT.populateFullReal(1024, recorder.audio_buffer);
-        var imag = jsFFT.makeComplex(real, 1024);
-        var freq = jsFFT.FFT(imag, 1024, 1);
-        var mag = jsFFT.Magnitude(freq, 1024);
+        var real = jsFFT.populateFullReal(sensing.fft_size, recorder.audio_buffer);
+        var imag = jsFFT.makeComplex(real, sensing.fft_size);
+        var freq = jsFFT.FFT(imag, sensing.fft_size, 1);
+        var mag = jsFFT.Magnitude(freq, sensing.fft_size);
 
         // sample rate 44100 Hz / number of FFT bins 1024 Hz = 43 Hz per bin
         // pilot tone 18000 Hz / 43 Hz per bin = pilot tone bin 418
-        var pilot_tone_bin = 418;
+        var bin_width = Tone.context.sampleRate / sensing.fft_size;
+        var pilot_tone_bin = Math.ceil(sensing.pilot_tone / bin_width);
         var bandwidth_lower_bound = pilot_tone_bin;
         var bandwidth_upper_bound = pilot_tone_bin;
         // scan down
@@ -177,14 +186,14 @@
         );
 
         spectrogram.context.fillStyle = "#FF0000";
-        spectrogram.context.fillRect(418 - 5, 200, 10, 10);
+        spectrogram.context.fillRect(pilot_tone_bin - 5, 200, 10, 10);
         spectrogram.context.fillRect(bandwidth_lower_bound, 10,
           bandwidth_upper_bound - bandwidth_lower_bound, 100);
 
         // draw spectrogram
         spectrogram.context.strokeStyle = "#FFFFFF";
         spectrogram.context.beginPath();
-        spectrogram.context.moveTo(1024, 0);
+        spectrogram.context.moveTo(sensing.fft_size, 0);
         for (var i = mag.length - 1; i >= 0; i--) {
           spectrogram.context.lineTo(i, mag[i]*spectrogram.canvas.height);
         }
