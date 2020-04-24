@@ -144,32 +144,30 @@
         // sample rate 44100 Hz / number of FFT bins 1024 Hz = 43 Hz per bin
         // pilot tone 18000 Hz / 43 Hz per bin = pilot tone bin 418
         var pilot_tone_bin = 418;
-        var bandwidth_lower_bound = 0;
-        var bandwidth_upper_bound = 1024;
+        var bandwidth_lower_bound = pilot_tone_bin;
+        var bandwidth_upper_bound = pilot_tone_bin;
         // scan down
-        for (var i = pilot_tone_bin; i >= 0; i--) {
-          if (mag[i] < 0.9 * mag[pilot_tone_bin]) {
+        for (; bandwidth_lower_bound >= 0; bandwidth_lower_bound--) {
+          if (mag[bandwidth_lower_bound] < 0.1 * mag[pilot_tone_bin]) {
             // amplitude drops below 10% of the pilot tone's amplitude
-            bandwidth_lower_bound = i;
             break;
           }
         }
         // scan up
-        for (var i = pilot_tone_bin; i < mag.length; i++) {
-          if (mag[i] < 0.9 * mag[pilot_tone_bin]) {
+        for (; bandwidth_upper_bound < mag.length; bandwidth_upper_bound++) {
+          if (mag[bandwidth_upper_bound] < 0.1 * mag[pilot_tone_bin]) {
             // amplitude drops below 10% of the pilot tone's amplitude
-            bandwidth_upper_bound = i;
             break;
           }
         }
         var lower_diff = pilot_tone_bin - bandwidth_lower_bound;
         var upper_diff = bandwidth_upper_bound - pilot_tone_bin;
-        if (lower_diff > upper_diff && lower_diff > 1) {
+        if (lower_diff > upper_diff && lower_diff >= 4) {
           document.getElementById('classification-output').innerHTML = 'PULL';
-        } else if (upper_diff > lower_diff && upper_diff > 1) {
+        } else if (upper_diff > lower_diff && upper_diff >= 4) {
           document.getElementById('classification-output').innerHTML = 'PUSH';
         }
-        console.log(bandwidth_lower_bound, bandwidth_upper_bound);
+        console.log(bandwidth_lower_bound, pilot_tone_bin, bandwidth_upper_bound);
 
         // clear screen
         spectrogram.context.fillStyle = "#000000";
