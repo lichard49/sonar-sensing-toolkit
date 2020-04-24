@@ -40,7 +40,7 @@
       <nav class="level">
         <div class="level-item has-text-centered">
           <div>
-            <h3 class="title is-3">Classification</h3>
+            <h3 id="classification-output" class="title is-3">Classification</h3>
           </div>
         </div>
       </nav>
@@ -82,6 +82,7 @@
     function stopDopplerSensing() {
       player.synth.triggerRelease();
       recorder.mic.close();
+      audio_init = false;
     }
 
     function initAudio() {
@@ -140,12 +141,47 @@
         var freq = jsFFT.FFT(imag, 1024, 1);
         var mag = jsFFT.Magnitude(freq, 1024);
 
+        // sample rate 44100 Hz / number of FFT bins 1024 Hz = 43 Hz per bin
+        // pilot tone 18000 Hz / 43 Hz per bin = pilot tone bin 418
+        var pilot_tone_bin = 418;
+        var bandwidth_lower_bound = 0;
+        var bandwidth_upper_bound = 1024;
+        // scan down
+        for (var i = pilot_tone_bin; i >= 0; i--) {
+          if (mag[i] < 0.9 * mag[pilot_tone_bin]) {
+            // amplitude drops below 10% of the pilot tone's amplitude
+            bandwidth_lower_bound = i;
+            break;
+          }
+        }
+        // scan up
+        for (var i = pilot_tone_bin; i < mag.length; i++) {
+          if (mag[i] < 0.9 * mag[pilot_tone_bin]) {
+            // amplitude drops below 10% of the pilot tone's amplitude
+            bandwidth_upper_bound = i;
+            break;
+          }
+        }
+        var lower_diff = pilot_tone_bin - bandwidth_lower_bound;
+        var upper_diff = bandwidth_upper_bound - pilot_tone_bin;
+        if (lower_diff > upper_diff && lower_diff > 1) {
+          document.getElementById('classification-output').innerHTML = 'PULL';
+        } else if (upper_diff > lower_diff && upper_diff > 1) {
+          document.getElementById('classification-output').innerHTML = 'PUSH';
+        }
+        console.log(bandwidth_lower_bound, bandwidth_upper_bound);
+
         // clear screen
         spectrogram.context.fillStyle = "#000000";
         spectrogram.context.fillRect(0, 0,
           spectrogram.canvas.getAttribute('width'),
           spectrogram.canvas.getAttribute('height')
         );
+
+        spectrogram.context.fillStyle = "#FF0000";
+        spectrogram.context.fillRect(418 - 5, 200, 10, 10);
+        spectrogram.context.fillRect(bandwidth_lower_bound, 10,
+          bandwidth_upper_bound - bandwidth_lower_bound, 100);
 
         // draw spectrogram
         spectrogram.context.strokeStyle = "#FFFFFF";
