@@ -5,14 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sonar Sensing Toolkit</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
-    <style>
-      #spectrogram-canvas {
-        background-color: #000000;
-        width: 100%;
-      }
-    </style>
     <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
     <script src="/static/js/tone.js"></script>
+    <script src="/static/js/fft.js"></script>
   </head>
   <body>
   <section class="section">
@@ -37,7 +32,7 @@
 
       <nav class="level">
         <div class="level-item hero-body">
-          <canvas id="spectrogram-canvas">
+          <canvas id="spectrogram-canvas" width="1024" height="300">
             Spectrogram showing live mic data.
           </canvas>
         </div>
@@ -62,7 +57,8 @@
 
     var recorder = {
       mic: null,
-      processor: null
+      processor: null,
+      audio_buffer: null
     };
 
     var spectrogram = {
@@ -70,12 +66,14 @@
       context: null
     };
     spectrogram.context = spectrogram.canvas.getContext('2d');
-    spectrogram.canvas.height = spectrogram.canvas.width / 3;
     spectrogram.context.fillStyle = "#000000";
     spectrogram.context.fillRect(0, 0,
       spectrogram.canvas.getAttribute('width'),
       spectrogram.canvas.getAttribute('height')
     );
+    // move the origin to the bottom left corner
+    spectrogram.context.translate(0, spectrogram.canvas.height);
+    spectrogram.context.scale(1, -1);
 
     function initAudio() {
       // create a synth and connect it to the master output (your speakers)
@@ -114,7 +112,8 @@
     }
 
     function onAudioData(event) {
-      document.getElementById('audio-mag').innerHTML = getMagnitude(event.inputBuffer.getChannelData(0));
+      recorder.audio_buffer = event.inputBuffer.getChannelData(0).slice();
+      document.getElementById('audio-mag').innerHTML = getMagnitude(recorder.audio_buffer);
     }
 
     function getMagnitude(array) {
@@ -124,6 +123,31 @@
       }
       return mag ** 0.5;
     }
+
+    setInterval(function() {
+      if (audio_init && recorder.audio_buffer != null) {
+        var real = jsFFT.populateFullReal(1024, recorder.audio_buffer);
+        var imag = jsFFT.makeComplex(real, 1024);
+        var freq = jsFFT.FFT(imag, 1024, 1);
+        var mag = jsFFT.Magnitude(freq, 1024);
+
+        // clear screen
+        spectrogram.context.fillStyle = "#000000";
+        spectrogram.context.fillRect(0, 0,
+          spectrogram.canvas.getAttribute('width'),
+          spectrogram.canvas.getAttribute('height')
+        );
+
+        // draw spectrogram
+        spectrogram.context.strokeStyle = "#FFFFFF";
+        spectrogram.context.beginPath();
+        spectrogram.context.moveTo(1024, 0);
+        for (var i = mag.length - 1; i >= 0; i--) {
+          spectrogram.context.lineTo(i, mag[i]*spectrogram.canvas.height);
+        }
+        spectrogram.context.stroke();
+      }
+    }, 100);
   </script>
   </body>
 </html>
