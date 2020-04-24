@@ -22,9 +22,8 @@
       <nav class="level">
         <div class="level-item has-text-centered">
           <div>
-            <button onclick="playSound(200);">Play a sound</button>
-            <button onclick="playSound(2000);">Play a higher sound</button>
-            <button onclick="recordSound();">Record a sound</button>
+            <button onclick="startDopplerSensing();">Start</button>
+            <button onclick="stopDopplerSensing();">Stop</button>
             <p>Magnitude: <span id="audio-mag"></span></p>
           </div>
         </div>
@@ -74,6 +73,16 @@
     // move the origin to the bottom left corner
     spectrogram.context.translate(0, spectrogram.canvas.height);
     spectrogram.context.scale(1, -1);
+
+    function startDopplerSensing() {
+      playSound(18000);
+      recordSound();
+    }
+
+    function stopDopplerSensing() {
+      player.synth.triggerRelease();
+      recorder.mic.close();
+    }
 
     function initAudio() {
       // create a synth and connect it to the master output (your speakers)
