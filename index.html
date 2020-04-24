@@ -22,6 +22,7 @@
       <nav class="level">
         <div class="level-item has-text-centered">
           <div>
+            <p>Device: <select id="device-select"></select></p>
             <p>Sample Rate: <span id="sample-rate"></span></p>
             <button onclick="startDopplerSensing();">Start</button>
             <button onclick="stopDopplerSensing();">Stop</button>
@@ -80,6 +81,23 @@
     spectrogram.context.translate(0, spectrogram.canvas.height);
     spectrogram.context.scale(1, -1);
 
+    function showAudioConfig() {
+      Tone.UserMedia.enumerateDevices().then(function(devices){
+        for (var i = devices.length - 1; i >= 0; i--) {
+          var device = devices[i];
+          var device_option = document.createElement('option');
+          device_option.value = device.deviceId;
+          device_option.innerHTML = device.label; // whatever property it has
+
+          // then append it to the select element
+          document.getElementById('device-select').appendChild(device_option);
+        }
+      });
+
+      document.getElementById('sample-rate').innerHTML = Tone.context.sampleRate;
+    }
+    showAudioConfig();
+
     function startDopplerSensing() {
       playSound(sensing.pilot_tone);
       recordSound();
@@ -101,8 +119,6 @@
       recorder.processor = Tone.context.createScriptProcessor(sensing.fft_size, 1, 1);
       recorder.processor.connect(Tone.context.destination.input);
 
-      document.getElementById('sample-rate').innerHTML = Tone.context.sampleRate;
-
       audio_init = true;
     }
 
@@ -121,7 +137,10 @@
       }
 
       // opening the input asks the user to activate their mic
-      recorder.mic.open().then(function(e) {
+      var device_select = document.getElementById('device-select');
+      var selected_mic = device_select.options[device_select.selectedIndex].value;
+      console.log('selected mic:', selected_mic);
+      recorder.mic.open(selected_mic).then(function(e) {
         // promise resolves when input is available
         e._mediaStream.connect(recorder.processor);
 
