@@ -32,7 +32,7 @@
       </nav>
 
       <nav class="level">
-        <canvas id="spectrogram-canvas" width="520" height="300" style="overflow: visible; margin: 10px;">
+        <canvas id="spectrogram-canvas" width="1100" height="300" style="overflow: visible; margin-left: auto; margin-right: auto;">
           Spectrogram showing live mic data.
         </canvas>
       </nav>
@@ -40,7 +40,7 @@
       <nav class="level">
         <div class="level-item has-text-centered">
           <div>
-            <h3 id="classification-output" class="title is-3">Classification</h3>
+            <h3 class="title is-3">Recognized: <span id="classification-output">NONE</span></h3>
           </div>
         </div>
       </nav>
@@ -52,7 +52,8 @@
 
     var sensing = {
       pilot_tone: 18000,
-      fft_size: 1024
+      fft_size: 2048,
+      silence_count: 0
     }
 
     var player = {
@@ -161,6 +162,28 @@
       return mag ** 0.5;
     }
 
+    function findBlurShift(mag, start_bin, search_range, search_direction) {
+      if (search_direction > 0) {
+        var current_bin;
+        for (current_bin = start_bin; current_bin < search_range; current_bin++) {
+          // amplitude drops below 10% of the pilot tone's amplitude
+          if (mag[current_bin] < 0.1 * mag[start_bin]) {
+            break;
+          }
+        }
+        return current_bin;
+      } else {
+        var current_bin;
+        for (current_bin = start_bin; current_bin > search_range; current_bin--) {
+          // amplitude drops below 10% of the pilot tone's amplitude
+          if (mag[current_bin] < 0.1 * mag[start_bin]) {
+            break;
+          }
+        }
+        return current_bin;
+      }
+    }
+
     setInterval(function() {
       if (audio_init && recorder.audio_buffer != null) {
         var real = jsFFT.populateFullReal(sensing.fft_size, recorder.audio_buffer);
@@ -172,28 +195,23 @@
         // pilot tone 18000 Hz / 43 Hz per bin = pilot tone bin 418
         var bin_width = Tone.context.sampleRate / sensing.fft_size;
         var pilot_tone_bin = Math.ceil(sensing.pilot_tone / bin_width);
-        var bandwidth_lower_bound = pilot_tone_bin;
-        var bandwidth_upper_bound = pilot_tone_bin;
-        // scan down
-        for (; bandwidth_lower_bound >= 0; bandwidth_lower_bound--) {
-          if (mag[bandwidth_lower_bound] < 0.1 * mag[pilot_tone_bin]) {
-            // amplitude drops below 10% of the pilot tone's amplitude
-            break;
-          }
-        }
-        // scan up
-        for (; bandwidth_upper_bound < mag.length; bandwidth_upper_bound++) {
-          if (mag[bandwidth_upper_bound] < 0.1 * mag[pilot_tone_bin]) {
-            // amplitude drops below 10% of the pilot tone's amplitude
-            break;
-          }
-        }
+
+        // first scan
+        var bandwidth_lower_bound = findBlurShift(mag, pilot_tone_bin, pilot_tone_bin - 33, -1);
+        var bandwidth_upper_bound = findBlurShift(mag, pilot_tone_bin, pilot_tone_bin + 33, 1);
         var lower_diff = pilot_tone_bin - bandwidth_lower_bound;
         var upper_diff = bandwidth_upper_bound - pilot_tone_bin;
         if (lower_diff > upper_diff && lower_diff >= 4) {
           document.getElementById('classification-output').innerHTML = 'PULL';
+          sensing.silence_count = 0;
         } else if (upper_diff > lower_diff && upper_diff >= 4) {
           document.getElementById('classification-output').innerHTML = 'PUSH';
+          sensing.silence_count = 0;
+        } else {
+          sensing.silence_count += 1;
+          if (sensing.silence_count > 5) {
+            document.getElementById('classification-output').innerHTML = 'NONE';
+          }
         }
         console.log(bandwidth_lower_bound, pilot_tone_bin, bandwidth_upper_bound);
 
@@ -205,10 +223,10 @@
         );
 
         // pilot tone tracking
-        spectrogram.context.fillStyle = "#FF0000";
-        spectrogram.context.fillRect(pilot_tone_bin - 5, 200, 10, 10);
-        spectrogram.context.fillRect(bandwidth_lower_bound, 10,
-          bandwidth_upper_bound - bandwidth_lower_bound, 100);
+        // spectrogram.context.fillStyle = "#FF0000";
+        // spectrogram.context.fillRect(pilot_tone_bin - 5, 200, 10, 10);
+        // spectrogram.context.fillRect(bandwidth_lower_bound, 10,
+        //   bandwidth_upper_bound - bandwidth_lower_bound, 100);
 
         // draw spectrogram
         spectrogram.context.strokeStyle = "#FFFFFF";
