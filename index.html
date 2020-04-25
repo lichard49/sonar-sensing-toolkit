@@ -141,6 +141,8 @@
       recorder.mic.open(selected_mic).then(function(e) {
         // promise resolves when input is available
         e._mediaStream.connect(recorder.processor);
+        // https://bugs.webkit.org/show_bug.cgi?id=179411#c7
+        e._mediaStream.mediaStream.getAudioTracks()[0].applyConstraints({echoCancellation: false});
 
         recorder.processor.onaudioprocess = onAudioData;
       });
